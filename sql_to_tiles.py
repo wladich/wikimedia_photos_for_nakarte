@@ -8,7 +8,7 @@ import pyproj
 from lib.image_store import MBTilesWriter
 from cStringIO import StringIO
 from array import array
-import Image, ImageDraw
+from PIL import Image, ImageDraw
 
 proj_wgs84 = pyproj.Proj('+init=EPSG:4326')
 proj_gmerc = pyproj.Proj('+init=EPSG:3857')
