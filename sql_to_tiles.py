@@ -9,6 +9,7 @@ from lib.image_store import MBTilesWriter
 from cStringIO import StringIO
 from array import array
 from PIL import Image, ImageDraw
+import argparse
 
 proj_wgs84 = pyproj.Proj('+init=EPSG:4326')
 proj_gmerc = pyproj.Proj('+init=EPSG:3857')
@@ -28,36 +29,52 @@ class PointsStorage(object):
         self.db.executescript('''
             PRAGMA journal_mode = OFF;
             PRAGMA synchronous = OFF;
-            CREATE TABLE point (x NUMERIC, y NUMERIC, UNIQUE(x, y) ON CONFLICT IGNORE);
-            CREATE INDEX idx_point_x ON point(x);
-            CREATE INDEX idx_point_y ON point(y);
+            PRAGMA cache_size=-200000;
+
+            CREATE TABLE point (x NUMERIC, y NUMERIC, page_id NUMERIC);
+            CREATE TABLE image_page (page_id NUMERIC);
+            CREATE VIRTUAL TABLE point_tree USING rtree_i32(id, minx, maxx, miny, maxy);
         ''')
 
-    def add(self, x, y):
-        self.db.execute('INSERT INTO point (x, y) VALUES (?, ?)', (x, y))
+    def add_page(self, page_id):
+        self.db.execute('INSERT INTO image_page (page_id) VALUES (?)', (page_id,))
+
+    def add_point(self, x, y, page_id):
+        self.db.execute('INSERT INTO point (x, y, page_id) VALUES (?, ?, ?)', (int(round(x)), int(round(y)), page_id))
 
     def get_points_in_bbox(self, minx, miny, maxx, maxy):
-        return self.db.execute('SELECT x, y FROM point WHERE ? < x AND ? < y AND x < ?  AND y < ?',
-                               (minx, miny, maxx, maxy))
+        return self.db.execute('SELECT minx, miny FROM point_tree WHERE minx > ? AND minx <= ? AND miny > ? AND miny <= ?',
+                               (minx, maxx, miny, maxy))
 
-    def commit(self):
+    def finalize_insert(self):
         self.db.commit()
-        self.db.execute('ANALYZE;')
+        self.db.executescript('''
+            CREATE INDEX idx_point_x ON point(x);
+            CREATE INDEX idx_point_xy ON point(x, y);
+            CREATE INDEX idx_point_page_id ON point(page_id);
+            CREATE INDEX idx_page_id ON image_page(page_id);
+            INSERT INTO point_tree
+              SELECT ROWID, x, x, y, y FROM (
+                SELECT DISTINCT x, y from point inner join image_page on point.page_id=image_page.page_id 
+              );
+        ''')
 
 
-def load_points_to_tmp_db(in_file, temp_dir):
+def load_points_to_tmp_db(geotags_file, pages_file, temp_dir):
     points = PointsStorage(temp_dir)
-    for lon, lat in wikisql.iterate_coords(in_file):
+    for page_id in wikisql.iterate_image_pages(pages_file):
+        points.add_page(page_id)
+
+    for lon, lat, page_id in wikisql.iterate_coords(geotags_file):
         x, y = pyproj.transform(proj_wgs84, proj_gmerc, lon, lat)
-        points.add(x, y)
-    points.commit()
+        points.add_point(x, y, page_id)
+    points.finalize_insert()
     return points
 
 
 def get_symbol(r):
     global _symbol
     if _symbol is None:
-        r = symbol_radius
         dest_size = r * 2 + 1
         q = 4
         im = Image.new('L', (dest_size * q, dest_size * q), 0)
@@ -156,13 +173,19 @@ def iterate_tiles(points):
         yield tile_data, tile_index
 
 
-def main(in_file, out_file):
-    if os.path.exists(out_file):
-        raise Exception('File "%s" exists' % out_file)
-    tmp_dir = os.path.abspath(os.path.dirname(out_file))
-    points = load_points_to_tmp_db(in_file, tmp_dir)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('geotags_dump', metavar='commonswiki-latest-geo_tags.sql.gz')
+    parser.add_argument('page_dump', metavar='commonswiki-latest-page.sql.gz')
+    parser.add_argument('tiles', metavar='tiles.db')
+    conf = parser.parse_args()
 
-    writer = MBTilesWriter(out_file)
+    if os.path.exists(conf.tiles):
+        raise Exception('File "%s" exists' % conf.tiles)
+    tmp_dir = os.path.abspath(os.path.dirname(conf.tiles))
+    points = load_points_to_tmp_db(conf.geotags_dump, conf.page_dump, tmp_dir)
+
+    writer = MBTilesWriter(conf.tiles)
     for tile_data, tile_index in iterate_tiles(points):
         tile_index = tile_index_from_tms(tile_index)
         writer.write(tile_data, *tile_index)
@@ -170,7 +193,4 @@ def main(in_file, out_file):
 
 
 if __name__ == '__main__':
-    import sys
-    if len(sys.argv) != 3:
-        print 'Usage: %s /path/to/commonswiki-latest-geo_tags.sql.gz commons-wiki-tiles.db' % 'sql_to_tiles.py'
-    main(*sys.argv[1:])
+    main()

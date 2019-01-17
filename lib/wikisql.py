@@ -97,19 +97,30 @@ def extract_coords(rows):
     for row in rows:
         assert 11 == len(row), repr(row)
         id_, page_id, globe, primary, lat, lon, dim, type_, name, country, region = row
-        assert int(page_id)
         if globe == 'earth' and primary == '1':
             flat = float(lat)
             flon = float(lon)
-            if flat == 0 and flon == 0:
+            if flat == 0 or flon == 0:
                 continue
             if flat < -85.06 or flat > 85.06 or flon < -180 or flon > 180:
                 continue
             if flat == int(flat) and flon == int(flon):
                 continue
-            yield flon, flat
+            yield flon, flat, int(page_id)
 
 
 def iterate_coords(in_file):
     return extract_coords(iterate_rows(in_file))
 
+
+def extract_image_page_ids(rows):
+    for row in rows:
+        page_id, page_namespace, page_title = row[:3]
+        if page_namespace == '6':
+            basename, _, ext = page_title.rpartition('.')
+            if basename and ext.lower() == 'jpg':
+                yield int(page_id)
+
+
+def iterate_image_pages(in_file):
+    return extract_image_page_ids(iterate_rows(in_file))
