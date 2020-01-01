@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import multiprocessing
-import pysqlite2.dbapi2 as sqlite
+import sqlite3 as sqlite
 
 db_lock = multiprocessing.Lock()
 

@@ -2,7 +2,7 @@
 # coding: utf-8
 import os
 import tempfile
-import pysqlite2.dbapi2 as sqlite
+import sqlite3 as sqlite
 from lib import wikisql
 import pyproj
 from lib.image_store import MBTilesWriter
