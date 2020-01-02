@@ -29,7 +29,6 @@ class PointsStorage(object):
         self.db.executescript('''
             PRAGMA journal_mode = OFF;
             PRAGMA synchronous = OFF;
-            PRAGMA cache_size=-200000;
 
             CREATE TABLE point (x NUMERIC, y NUMERIC, page_id NUMERIC);
             CREATE TABLE image_page (page_id NUMERIC);
@@ -49,10 +48,7 @@ class PointsStorage(object):
     def finalize_insert(self):
         self.db.commit()
         self.db.executescript('''
-            CREATE INDEX idx_point_x ON point(x);
-            CREATE INDEX idx_point_xy ON point(x, y);
             CREATE INDEX idx_point_page_id ON point(page_id);
-            CREATE INDEX idx_page_id ON image_page(page_id);
             INSERT INTO point_tree
               SELECT ROWID, x, x, y, y FROM (
                 SELECT DISTINCT x, y from point inner join image_page on point.page_id=image_page.page_id 
