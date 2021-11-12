@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 import os
 import tempfile
@@ -6,7 +6,7 @@ import sqlite3 as sqlite
 from lib import wikisql
 import pyproj
 from lib.image_store import MBTilesWriter
-from cStringIO import StringIO
+from io import BytesIO
 from array import array
 from PIL import Image, ImageDraw
 import argparse
@@ -22,7 +22,7 @@ _symbol = None
 symbol_color = (255, 0, 255)
 
 
-class PointsStorage(object):
+class PointsStorage:
     def __init__(self, temp_dir):
         self.tmp_file = tempfile.NamedTemporaryFile(dir=temp_dir)
         self.db = sqlite.connect(self.tmp_file.name)
@@ -87,7 +87,8 @@ def get_tile_extents(x, y, z):
     return (x * tile_size - max_coord, y * tile_size - max_coord, tile_size)
 
 
-def tile_index_from_tms((x, y, z)):
+def tile_index_from_tms(index):
+    (x, y, z) = index
     y = (2 ** z) - 1 - y
     return x, y, z
 
@@ -119,7 +120,7 @@ def draw_tile(points, tile_x, tile_y, tile_z):
         #TODO: make paletted images
         im2 = Image.new('RGBA', im.size)
         im2.paste(symbol_color + (255,), (0, 0), mask=im)
-        f = StringIO()
+        f = BytesIO()
         im2.save(f, 'PNG')
         return f.getvalue()
     else:
@@ -145,7 +146,7 @@ def make_vector_tile(points, tile_x, tile_y, tile_z):
         y = (1 - (y - tile_min_y) / tile_size) * extent + offset
         ar.append(int(round(x)))
         ar.append(int(round(y)))
-    return ar.tostring()
+    return ar.tobytes()
 
 
 def iterate_tiles(points):

@@ -5,7 +5,7 @@ import sqlite3 as sqlite
 
 db_lock = multiprocessing.Lock()
 
-class MBTilesWriter(object):
+class MBTilesWriter:
     SCHEME = '''
         CREATE TABLE tiles(
             zoom_level integer, tile_column integer, tile_row integer, tile_data blob,
@@ -35,14 +35,13 @@ class MBTilesWriter(object):
             conn.executescript(self.PRAGMAS)
         return self._conn
     
-    def write(self, data, tile_x, tile_y, level):
+    def write(self, data: bytes, tile_x, tile_y, level):
         tile_y = 2 ** level - tile_y - 1
-        s = buffer(data)
         with db_lock:
             conn = self.conn
             conn.execute('''
                 INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?,?,?,?)''',
-                (level, tile_x, tile_y, s))
+                (level, tile_x, tile_y, data))
 
     def close(self):
         conn = self.conn
@@ -50,7 +49,7 @@ class MBTilesWriter(object):
         conn.close()
 
 
-class FilesWriter(object):
+class FilesWriter:
     def __init__(self, path):
         if not os.path.isdir(path):
             os.makedirs(path)

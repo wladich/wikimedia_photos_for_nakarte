@@ -85,7 +85,7 @@ def parse_values(values):
 
 
 def iterate_rows(filename):
-    for line in gzip.open(filename):
+    for line in gzip.open(filename, mode='rt', encoding='utf-8'):
         if is_insert(line):
             values = get_values(line)
             assert values_sanity_check(values)
