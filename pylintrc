@@ -1,0 +1,27 @@
+[MASTER]
+# Pickle collected data for later comparisons.
+persistent=no
+
+[MESSAGES CONTROL]
+
+disable=
+    missing-function-docstring,
+    missing-module-docstring,
+    missing-class-docstring,
+    fixme,
+    # fix later:
+    invalid-name,
+    bad-continuation,
+    wrong-import-order,
+    ungrouped-imports,
+    misplaced-comparison-constant,
+    trailing-whitespace,
+    bad-whitespace,
+    line-too-long,
+    global-statement,
+    too-many-locals,
+    no-else-return
+
+[VARIABLES]
+dummy-variables-rgx=(_|_unused(_.+)?)
+
