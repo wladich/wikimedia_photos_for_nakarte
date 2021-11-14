@@ -109,7 +109,7 @@ def extract_coords(rows):
                 continue
             flat = float(lat)
             flon = float(lon)
-            if flat == 0 or flon == 0:
+            if flat == 0 or flon == 0 or flat == flon:
                 continue
             if flat < -85.06 or flat > 85.06 or flon < -180 or flon > 180:
                 continue
