@@ -104,7 +104,7 @@ def extract_coords(rows):
     for row in rows:
         assert 11 == len(row), repr(row)
         id_, page_id, globe, primary, lat, lon, dim, type_, name, country, region = row
-        if globe == 'earth' and primary == '1':
+        if globe == 'earth':
             if is_coord_like_artificial(lat) and is_coord_like_artificial(lon):
                 continue
             flat = float(lat)
