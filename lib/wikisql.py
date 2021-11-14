@@ -93,11 +93,20 @@ def iterate_rows(filename):
                 yield row
 
 
+def is_coord_like_artificial(s: str):
+    frac = s.partition('.')[2]
+    if len(frac.rstrip('0')) < 2:
+        return True
+    return False
+
+
 def extract_coords(rows):
     for row in rows:
         assert 11 == len(row), repr(row)
         id_, page_id, globe, primary, lat, lon, dim, type_, name, country, region = row
         if globe == 'earth' and primary == '1':
+            if is_coord_like_artificial(lat) and is_coord_like_artificial(lon):
+                continue
             flat = float(lat)
             flon = float(lon)
             if flat == 0 or flon == 0:
@@ -118,8 +127,9 @@ def extract_image_page_ids(rows):
         page_id, page_namespace, page_title = row[:3]
         if page_namespace == '6':
             basename, _, ext = page_title.rpartition('.')
-            if basename and ext.lower() == 'jpg':
-                yield int(page_id)
+            if 'View of Earth' in basename or ext.lower() != 'jpg':
+                continue
+            yield int(page_id)
 
 
 def iterate_image_pages(in_file):
