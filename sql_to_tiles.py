@@ -11,7 +11,8 @@ from array import array
 from PIL import Image, ImageDraw
 import argparse
 
-proj_transformer = pyproj.transformer.Transformer.from_crs('EPSG:4326', 'EPSG:3857')
+proj_wgs84 = pyproj.Proj('+init=EPSG:4326')
+proj_gmerc = pyproj.Proj('+init=EPSG:3857')
 
 
 vector_level = 11
@@ -61,7 +62,7 @@ def load_points_to_tmp_db(geotags_file, pages_file, temp_dir):
         points.add_page(page_id)
 
     for lon, lat, page_id in wikisql.iterate_coords(geotags_file):
-        x, y = proj_transformer.transform(lat, lon)
+        x, y = pyproj.transform(proj_wgs84, proj_gmerc, lon, lat)
         points.add_point(x, y, page_id)
     points.finalize_insert()
     return points
