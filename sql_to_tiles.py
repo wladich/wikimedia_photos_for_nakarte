@@ -76,7 +76,7 @@ def get_symbol(r):
         draw = ImageDraw.Draw(im)
         draw.ellipse([0, 0, 2 * r * q, 2 * r * q], fill=255)
         del draw
-        _symbol = im.resize((dest_size, dest_size), Image.ANTIALIAS)
+        _symbol = im.resize((dest_size, dest_size), Image.Resampling.LANCZOS)
     return _symbol
 
 
