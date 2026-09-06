@@ -85,8 +85,16 @@ def parse_values(values):
 
 
 def iterate_rows(filename):
-    for line in gzip.open(filename, mode='rt', encoding='utf-8'):
+    for line in (f:=gzip.open(filename, mode='rt', encoding='utf-8')):
         if is_insert(line):
+            line_parts = [line.rstrip()]
+            while line_parts[-1][-1] != ';':
+                if len(line_parts) == 1:
+                    line_parts.append(' ')
+                line_parts.append(next(f).rstrip())
+                if len(line_parts) > 15_000:
+                    raise Exception("Too many line parts")
+            line = ''.join(line_parts)
             values = get_values(line)
             assert values_sanity_check(values)
             for row in parse_values(values):
